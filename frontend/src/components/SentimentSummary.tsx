@@ -10,41 +10,43 @@ export function SentimentSummary({ results, meta }: Props) {
   const positive = results.filter((r) => r.sentiment === "positivo").length;
   const negative = results.filter((r) => r.sentiment === "negativo").length;
   const neutral = results.filter((r) => r.sentiment === "neutro").length;
-
   const avgConfidence = results.reduce((sum, r) => sum + r.confidence, 0) / total;
 
-  const bars = [
-    { label: "Positivo", count: positive, pct: Math.round((positive / total) * 100), color: "bg-emerald-500", textColor: "text-emerald-700" },
-    { label: "Negativo", count: negative, pct: Math.round((negative / total) * 100), color: "bg-red-500", textColor: "text-red-700" },
-    { label: "Neutro", count: neutral, pct: Math.round((neutral / total) * 100), color: "bg-slate-400", textColor: "text-slate-600" },
+  const stats = [
+    { label: "Positive", count: positive, pct: Math.round((positive / total) * 100), color: "bg-emerald-500", textColor: "text-emerald-600" },
+    { label: "Negative", count: negative, pct: Math.round((negative / total) * 100), color: "bg-red-400", textColor: "text-red-500" },
+    { label: "Neutre",   count: neutral,  pct: Math.round((neutral  / total) * 100), color: "bg-slate-300", textColor: "text-slate-500" },
   ];
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-      <h2 className="text-lg font-bold text-slate-900 mb-4">Riepilogo Analisi</h2>
+    <div className="bg-white rounded-2xl border border-slate-100 p-6">
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="text-sm font-semibold text-slate-800">Risultati analisi</h3>
+        <span className="text-xs text-slate-400">{total} recensioni &middot; {(meta.processingTimeMs / 1000).toFixed(1)}s</span>
+      </div>
 
-      <div className="space-y-3 mb-5">
-        {bars.map((bar) => (
-          <div key={bar.label} className="flex items-center gap-3">
-            <span className={`text-sm font-medium w-20 ${bar.textColor}`}>{bar.label}</span>
-            <div className="flex-1 h-4 bg-slate-100 rounded-full overflow-hidden">
-              <div
-                className={`h-full ${bar.color} rounded-full transition-all duration-700`}
-                style={{ width: `${bar.pct}%` }}
-              />
-            </div>
-            <span className="text-sm font-semibold text-slate-700 w-16 text-right">
-              {bar.count} ({bar.pct}%)
-            </span>
-          </div>
+      {/* Stacked bar */}
+      <div className="flex h-2 rounded-full overflow-hidden mb-5 gap-0.5">
+        {stats.map((s) => s.pct > 0 && (
+          <div
+            key={s.label}
+            className={`h-full ${s.color} transition-all duration-700`}
+            style={{ width: `${s.pct}%` }}
+          />
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-4 text-xs text-slate-400 pt-3 border-t border-slate-100">
-        <span>{total} recensioni analizzate</span>
-        <span>Confidenza media: {Math.round(avgConfidence * 100)}%</span>
-        <span>Tempo: {(meta.processingTimeMs / 1000).toFixed(1)}s</span>
-        <span>Modello: {meta.model}</span>
+      <div className="flex gap-6">
+        {stats.map((s) => (
+          <div key={s.label} className="flex items-center gap-2">
+            <span className={`text-xl font-bold ${s.textColor}`}>{s.pct}%</span>
+            <span className="text-xs text-slate-400">{s.label}</span>
+          </div>
+        ))}
+        <div className="flex items-center gap-2 ml-auto">
+          <span className="text-xl font-bold text-slate-700">{Math.round(avgConfidence * 100)}%</span>
+          <span className="text-xs text-slate-400">confidenza media</span>
+        </div>
       </div>
     </div>
   );

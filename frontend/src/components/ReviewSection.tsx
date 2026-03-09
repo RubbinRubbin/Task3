@@ -1,12 +1,12 @@
 import { useState } from "react";
-import type { SentimentResult, Sentiment } from "../types";
+import type { Review, SentimentResult, Sentiment } from "../types";
 import { analyzeReviews, generateReviews } from "../api";
 import { SentimentCard } from "./SentimentCard";
 import { SentimentSummary } from "./SentimentSummary";
 import { LoadingSpinner } from "./LoadingSpinner";
 
 interface Props {
-  initialReviews: string[];
+  initialReviews: Review[];
 }
 
 type AnalysisState =
@@ -18,8 +18,25 @@ type AnalysisState =
 
 type FilterType = "all" | Sentiment;
 
+const GENERATED_NAMES = [
+  "Tommaso Galli", "Beatrice Longo", "Riccardo Poli", "Angela Mele", "Vincenzo Sala",
+  "Elisa Caputo", "Giacomo Serra", "Nadia Palma", "Bruno Fabbri", "Concetta Villa",
+];
+
+function Stars({ count }: { count: number }) {
+  return (
+    <div className="flex">
+      {[1,2,3,4,5].map((s) => (
+        <svg key={s} className={`w-3.5 h-3.5 ${s <= count ? "text-amber-400" : "text-slate-200"}`} fill="currentColor" viewBox="0 0 20 20">
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+        </svg>
+      ))}
+    </div>
+  );
+}
+
 export function ReviewSection({ initialReviews }: Props) {
-  const [reviews, setReviews] = useState<string[]>(initialReviews);
+  const [reviews, setReviews] = useState<Review[]>(initialReviews);
   const [state, setState] = useState<AnalysisState>({ status: "idle" });
   const [filter, setFilter] = useState<FilterType>("all");
 
@@ -28,17 +45,10 @@ export function ReviewSection({ initialReviews }: Props) {
   async function handleAnalyze() {
     setState({ status: "analyzing" });
     try {
-      const response = await analyzeReviews(reviews);
-      setState({
-        status: "success",
-        results: response.data.results,
-        meta: response.meta,
-      });
+      const response = await analyzeReviews(reviews.map((r) => r.text));
+      setState({ status: "success", results: response.data.results, meta: response.meta });
     } catch (err) {
-      setState({
-        status: "error",
-        message: err instanceof Error ? err.message : "Errore durante l'analisi",
-      });
+      setState({ status: "error", message: err instanceof Error ? err.message : "Errore durante l'analisi" });
     }
   }
 
@@ -46,92 +56,83 @@ export function ReviewSection({ initialReviews }: Props) {
     setState({ status: "generating" });
     try {
       const response = await generateReviews(5);
-      const newReviews = [...reviews, ...response.data.reviews];
-      setReviews(newReviews);
+      const newReviews: Review[] = response.data.reviews.map((text, i) => ({
+        text,
+        author: GENERATED_NAMES[(reviews.length + i) % GENERATED_NAMES.length],
+        stars: [1, 2, 3, 4, 5][Math.floor(Math.random() * 5)],
+      }));
+      setReviews((prev) => [...prev, ...newReviews]);
       setState({ status: "idle" });
     } catch (err) {
-      setState({
-        status: "error",
-        message: err instanceof Error ? err.message : "Errore durante la generazione",
-      });
+      setState({ status: "error", message: err instanceof Error ? err.message : "Errore durante la generazione" });
     }
   }
 
-  const filteredResults =
+  const filteredPairs =
     state.status === "success"
-      ? filter === "all"
-        ? state.results
-        : state.results.filter((r) => r.sentiment === filter)
+      ? state.results
+          .map((result, i) => ({ result, review: reviews[i] }))
+          .filter(({ result }) => filter === "all" || result.sentiment === filter)
       : [];
 
   const filterButtons: { key: FilterType; label: string }[] = [
-    { key: "all", label: "Tutti" },
-    { key: "positivo", label: "Positivi" },
-    { key: "negativo", label: "Negativi" },
-    { key: "neutro", label: "Neutri" },
+    { key: "all", label: "Tutte" },
+    { key: "positivo", label: "Positive" },
+    { key: "negativo", label: "Negative" },
+    { key: "neutro", label: "Neutre" },
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Actions */}
+    <div className="space-y-5">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">
-            Recensioni ({reviews.length})
-          </h2>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Analizza il sentimento delle recensioni con AI
-          </p>
-        </div>
-        <div className="flex gap-3">
+        <h2 className="text-lg font-semibold text-slate-900">
+          Recensioni dei clienti
+          <span className="ml-2 text-sm font-normal text-slate-400">({reviews.length})</span>
+        </h2>
+        <div className="flex gap-2">
           <button
             onClick={handleGenerate}
             disabled={isLoading}
-            className="px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {state.status === "generating" ? "Generazione..." : "+ Genera nuove"}
           </button>
           <button
             onClick={handleAnalyze}
             disabled={isLoading}
-            className="px-6 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+            className="px-5 py-2 text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {state.status === "analyzing" ? "Analisi in corso..." : "Analizza tutte"}
+            {state.status === "analyzing" ? "Analisi..." : "Analizza tutte"}
           </button>
         </div>
       </div>
 
       {/* Error */}
       {state.status === "error" && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-          <svg className="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          <div>
-            <p className="text-sm font-medium text-red-800">Errore</p>
-            <p className="text-sm text-red-600 mt-0.5">{state.message}</p>
-          </div>
+        <div className="bg-red-50 border border-red-100 rounded-xl p-4 text-sm text-red-700">
+          {state.message}
         </div>
       )}
 
       {/* Loading */}
-      {state.status === "analyzing" && <LoadingSpinner message="OpenAI sta analizzando le recensioni..." />}
-      {state.status === "generating" && <LoadingSpinner message="OpenAI sta generando nuove recensioni..." />}
+      {(state.status === "analyzing" || state.status === "generating") && (
+        <LoadingSpinner message={state.status === "analyzing" ? "Analisi in corso..." : "Generazione recensioni..."} />
+      )}
 
       {/* Results */}
       {state.status === "success" && (
         <>
           <SentimentSummary results={state.results} meta={state.meta} />
 
-          {/* Filters */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {filterButtons.map((btn) => (
               <button
                 key={btn.key}
                 onClick={() => setFilter(btn.key)}
-                className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-all ${
+                className={`px-3 py-1 text-xs rounded-full font-medium transition-colors ${
                   filter === btn.key
-                    ? "bg-indigo-100 text-indigo-700"
+                    ? "bg-slate-900 text-white"
                     : "bg-slate-100 text-slate-500 hover:bg-slate-200"
                 }`}
               >
@@ -141,23 +142,28 @@ export function ReviewSection({ initialReviews }: Props) {
           </div>
 
           <div className="space-y-3">
-            {filteredResults.map((result, i) => (
-              <SentimentCard key={`${result.review}-${i}`} result={result} index={i} />
+            {filteredPairs.map(({ result, review }, i) => (
+              <SentimentCard key={i} result={result} review={review} />
             ))}
           </div>
         </>
       )}
 
-      {/* Idle: show raw reviews */}
+      {/* Idle */}
       {state.status === "idle" && (
-        <div className="grid gap-2">
+        <div className="divide-y divide-slate-100 bg-white rounded-2xl border border-slate-100 overflow-hidden">
           {reviews.map((review, i) => (
-            <div
-              key={i}
-              className="bg-white border border-slate-100 rounded-xl p-4 text-sm text-slate-600"
-            >
-              <span className="text-slate-400 font-medium mr-2">#{i + 1}</span>
-              {review}
+            <div key={i} className="px-5 py-4 flex items-start gap-4">
+              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-semibold text-slate-500 shrink-0">
+                {review.author.charAt(0)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm font-medium text-slate-800">{review.author}</span>
+                  <Stars count={review.stars} />
+                </div>
+                <p className="text-sm text-slate-500 leading-relaxed">{review.text}</p>
+              </div>
             </div>
           ))}
         </div>

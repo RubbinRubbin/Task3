@@ -1,71 +1,91 @@
-import type { SentimentResult } from "../types";
+import type { SentimentResult, Review } from "../types";
 
 const sentimentConfig = {
   positivo: {
     label: "Positivo",
-    bg: "bg-emerald-50",
-    badge: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    dot: "bg-emerald-500",
+    text: "text-emerald-700",
     bar: "bg-emerald-500",
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
+    ring: "ring-emerald-100",
   },
   negativo: {
     label: "Negativo",
-    bg: "bg-red-50",
-    badge: "bg-red-100 text-red-700 border-red-200",
+    dot: "bg-red-500",
+    text: "text-red-600",
     bar: "bg-red-500",
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
+    ring: "ring-red-100",
   },
   neutro: {
     label: "Neutro",
-    bg: "bg-slate-50",
-    badge: "bg-slate-100 text-slate-600 border-slate-200",
+    dot: "bg-slate-400",
+    text: "text-slate-500",
     bar: "bg-slate-400",
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h8M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
+    ring: "ring-slate-100",
   },
 };
 
-export function SentimentCard({ result, index }: { result: SentimentResult; index: number }) {
-  const config = sentimentConfig[result.sentiment];
+function Stars({ count }: { count: number }) {
+  return (
+    <div className="flex">
+      {[1,2,3,4,5].map((s) => (
+        <svg key={s} className={`w-3.5 h-3.5 ${s <= count ? "text-amber-400" : "text-slate-200"}`} fill="currentColor" viewBox="0 0 20 20">
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+        </svg>
+      ))}
+    </div>
+  );
+}
+
+interface Props {
+  result: SentimentResult;
+  review: Review;
+}
+
+export function SentimentCard({ result, review }: Props) {
+  const cfg = sentimentConfig[result.sentiment];
   const confidencePercent = Math.round(result.confidence * 100);
 
   return (
-    <div className={`${config.bg} rounded-xl p-5 border border-slate-100 transition-all hover:shadow-md`}>
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <p className="text-slate-800 text-sm leading-relaxed italic flex-1">
-          <span className="text-slate-400 font-medium not-italic mr-1">#{index + 1}</span>
-          &ldquo;{result.review}&rdquo;
-        </p>
-        <span className={`${config.badge} border text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5 shrink-0`}>
-          {config.icon}
-          {config.label}
+    <div className="bg-white rounded-2xl border border-slate-100 p-5 hover:border-slate-200 transition-colors">
+      {/* Author row */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-semibold text-slate-500">
+            {review.author.charAt(0)}
+          </div>
+          <div>
+            <p className="text-sm font-medium text-slate-800 leading-none">{review.author}</p>
+            <div className="mt-0.5">
+              <Stars count={review.stars} />
+            </div>
+          </div>
+        </div>
+        <span className={`flex items-center gap-1.5 text-xs font-semibold ${cfg.text}`}>
+          <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
+          {cfg.label}
         </span>
       </div>
 
-      <p className="text-slate-600 text-sm mb-3">
-        <span className="font-medium text-slate-700">Motivazione:</span> {result.motivation}
+      {/* Review text */}
+      <p className="text-sm text-slate-600 leading-relaxed mb-3">
+        &ldquo;{result.review}&rdquo;
       </p>
 
+      {/* Motivation */}
+      <p className="text-xs text-slate-400 leading-relaxed mb-3 italic">
+        {result.motivation}
+      </p>
+
+      {/* Confidence bar */}
       <div className="flex items-center gap-3">
-        <span className="text-xs text-slate-500 font-medium w-20">Confidenza</span>
-        <div className="flex-1 h-2 bg-white rounded-full overflow-hidden">
+        <span className="text-xs text-slate-400 w-16">Confidenza</span>
+        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
           <div
-            className={`h-full ${config.bar} rounded-full transition-all duration-500`}
+            className={`h-full ${cfg.bar} rounded-full transition-all duration-500`}
             style={{ width: `${confidencePercent}%` }}
           />
         </div>
-        <span className="text-xs font-semibold text-slate-600 w-10 text-right">
+        <span className="text-xs font-medium text-slate-500 w-8 text-right">
           {confidencePercent}%
         </span>
       </div>

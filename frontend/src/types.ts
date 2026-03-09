@@ -1,5 +1,11 @@
 export type Sentiment = "positivo" | "negativo" | "neutro";
 
+export interface Review {
+  text: string;
+  author: string;
+  stars: number;
+}
+
 export interface SentimentResult {
   review: string;
   sentiment: Sentiment;
