@@ -6,10 +6,8 @@ Applicazione full-stack che analizza il sentimento di recensioni testuali utiliz
 
 L'applicazione mostra una pagina prodotto (cuffie wireless "SoundPro X1") con ~30 recensioni pre-caricate. L'utente può:
 
-- **Analizzare** tutte le recensioni con un click, ottenendo per ciascuna: sentiment, motivazione e punteggio di confidenza
+- **Analizzare** tutte le recensioni con un click, ottenendo un **sentiment aggregato** complessivo con motivazione e punteggio di confidenza
 - **Generare nuove recensioni** casuali tramite OpenAI per dimostrare che l'analisi funziona su qualsiasi input
-- **Filtrare** i risultati per sentiment (positivo, negativo, neutro)
-- Visualizzare un **riepilogo statistico** con percentuali e metriche
 
 ## Architettura
 
@@ -39,9 +37,7 @@ L'applicazione mostra una pagina prodotto (cuffie wireless "SoundPro X1") con ~3
 | Componente | Descrizione |
 |---|---|
 | `ProductHero` | Card prodotto con immagine, prezzo, features |
-| `ReviewSection` | Orchestratore: lista recensioni, bottoni, stato |
-| `SentimentCard` | Card singola recensione con badge e barra confidenza |
-| `SentimentSummary` | Riepilogo con barre percentuali e metriche |
+| `ReviewSection` | Orchestratore: lista recensioni, bottoni, stato e risultato aggregato |
 
 ## Scelte Tecniche
 
@@ -52,7 +48,7 @@ L'integrazione con OpenAI utilizza `zodResponseFormat` per garantire che il mode
 ```typescript
 const response = await client.beta.chat.completions.parse({
   model: "gpt-4o-mini",
-  response_format: zodResponseFormat(SentimentBatchSchema, "sentiment_analysis"),
+  response_format: zodResponseFormat(AggregateAnalysisSchema, "sentiment_analysis"),
   // ...
 });
 ```
@@ -66,7 +62,7 @@ Questo approccio:
 
 - **Fail-fast**: il server non si avvia se `OPENAI_API_KEY` non è configurata
 - **Retry con backoff**: errori transitori (429, 5xx) vengono ritentati automaticamente
-- **Validazione doppia**: input validato con Zod, output verificato per coerenza (conteggio risultati = conteggio input)
+- **Validazione doppia**: input validato con Zod, output verificato a runtime tramite schema strutturato
 - **Error boundary**: ogni errore viene catturato e restituito in formato strutturato
 
 ### Stato Frontend
@@ -78,7 +74,7 @@ type AnalysisState =
   | { status: "idle" }
   | { status: "analyzing" }
   | { status: "generating" }
-  | { status: "success"; results: SentimentResult[]; meta: {...} }
+  | { status: "success"; result: AggregateResult; meta: {...} }
   | { status: "error"; message: string };
 ```
 
@@ -142,9 +138,8 @@ Il frontend parte su **http://localhost:5173**. Le chiamate API vengono proxate 
 
 1. Apri **http://localhost:5173** nel browser
 2. Vedrai la pagina prodotto con 30 recensioni pre-caricate
-3. Clicca **"Analizza tutte"** per lanciare l'analisi del sentimento
-4. Clicca **"+ Genera nuove"** per far generare a OpenAI nuove recensioni casuali
-5. Usa i filtri per visualizzare solo positive, negative o neutre
+3. Clicca **"Analizza tutte"** per ottenere il sentiment aggregato complessivo
+4. Clicca **"+ Genera nuove"** per far generare a OpenAI nuove recensioni casuali e ri-analizzare
 
 ## API Endpoints
 
@@ -167,19 +162,14 @@ Analizza un array di recensioni.
 {
   "success": true,
   "data": {
-    "results": [
-      {
-        "review": "Prodotto ottimo, consegna rapida.",
-        "sentiment": "positivo",
-        "motivation": "La recensione esprime soddisfazione sia per il prodotto che per la consegna.",
-        "confidence": 0.95
-      }
-    ]
+    "sentiment": "positivo",
+    "motivation": "La maggior parte dei clienti esprime soddisfazione per la qualità audio e il comfort. I punti di forza più citati sono la cancellazione del rumore e la durata della batteria.",
+    "confidence": 0.87
   },
   "meta": {
     "model": "gpt-4o-mini-2024-07-18",
     "processingTimeMs": 2340,
-    "reviewCount": 2
+    "reviewCount": 30
   }
 }
 ```

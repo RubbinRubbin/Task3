@@ -22,11 +22,11 @@ router.post("/", async (req: Request, res: Response) => {
   }
 
   try {
-    const { results, model } = await analyzeSentiments(parsed.data.reviews);
+    const { result, model } = await analyzeSentiments(parsed.data.reviews);
 
     res.json({
       success: true,
-      data: results,
+      data: result,
       meta: {
         model,
         processingTimeMs: Math.round(performance.now() - startTime),

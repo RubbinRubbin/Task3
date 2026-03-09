@@ -2,21 +2,21 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import { getOpenAIClient } from "../lib/openai.js";
 import { config } from "../lib/config.js";
 import { withRetry } from "../lib/retry.js";
-import { OpenAIError, ValidationError } from "../lib/errors.js";
+import { OpenAIError } from "../lib/errors.js";
 import {
-  SentimentBatchSchema,
+  AggregateAnalysisSchema,
   GeneratedReviewsSchema,
-  type SentimentBatch,
+  type AggregateAnalysis,
   type GeneratedReviews,
 } from "../schemas.js";
 
 const ANALYSIS_SYSTEM_PROMPT = `Sei un esperto di analisi del sentimento specializzato in lingua italiana.
-Per ogni recensione fornita, determina:
-1. Il sentiment: "positivo", "negativo" o "neutro"
-2. Una breve motivazione in italiano (1-2 frasi) che spiega il tuo ragionamento
-3. Un punteggio di confidenza tra 0.0 e 1.0
+Analizza TUTTE le recensioni fornite nel loro insieme e determina:
+1. Il sentiment GENERALE complessivo: "positivo", "negativo" o "neutro"
+2. Una breve motivazione in italiano (2-3 frasi) che descrive il sentiment generale, riassumendo i temi principali e le opinioni espresse dai clienti
+3. Un punteggio di confidenza tra 0.0 e 1.0 per la valutazione complessiva
 
-Sii preciso e coerente. Considera contesto, sarcasmo e sfumature della lingua italiana.
+Sii preciso e coerente. Considera il quadro generale, non le singole recensioni.
 Le recensioni riguardano delle cuffie wireless "SoundPro X1".`;
 
 const GENERATION_SYSTEM_PROMPT = `Genera recensioni italiane realistiche per delle cuffie wireless premium "SoundPro X1 — Cuffie Wireless con Cancellazione del Rumore" al prezzo di €149.99.
@@ -25,7 +25,7 @@ Ogni recensione deve sembrare scritta da un vero cliente italiano, con toni e st
 Copri aspetti come: qualità audio, comfort, batteria, cancellazione rumore, prezzo, design, Bluetooth, microfono.`;
 
 export async function analyzeSentiments(reviews: string[]): Promise<{
-  results: SentimentBatch;
+  result: AggregateAnalysis;
   model: string;
 }> {
   const client = getOpenAIClient();
@@ -39,9 +39,9 @@ export async function analyzeSentiments(reviews: string[]): Promise<{
       model: config.OPENAI_MODEL,
       messages: [
         { role: "system", content: ANALYSIS_SYSTEM_PROMPT },
-        { role: "user", content: userMessage },
+        { role: "user", content: `Analizza il sentiment complessivo di queste ${reviews.length} recensioni:\n\n${userMessage}` },
       ],
-      response_format: zodResponseFormat(SentimentBatchSchema, "sentiment_analysis"),
+      response_format: zodResponseFormat(AggregateAnalysisSchema, "sentiment_analysis"),
       temperature: 0.1,
     })
   );
@@ -56,14 +56,8 @@ export async function analyzeSentiments(reviews: string[]): Promise<{
     throw new OpenAIError("Failed to parse structured output from OpenAI");
   }
 
-  if (message.parsed.results.length !== reviews.length) {
-    throw new ValidationError(
-      `Expected ${reviews.length} results, got ${message.parsed.results.length}`
-    );
-  }
-
   return {
-    results: message.parsed,
+    result: message.parsed,
     model: response.model,
   };
 }

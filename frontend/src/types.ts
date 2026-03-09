@@ -6,8 +6,7 @@ export interface Review {
   stars: number;
 }
 
-export interface SentimentResult {
-  review: string;
+export interface AggregateResult {
   sentiment: Sentiment;
   motivation: string;
   confidence: number;
@@ -15,7 +14,7 @@ export interface SentimentResult {
 
 export interface AnalyzeResponse {
   success: true;
-  data: { results: SentimentResult[] };
+  data: AggregateResult;
   meta: {
     model: string;
     processingTimeMs: number;
