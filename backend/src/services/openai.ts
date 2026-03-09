@@ -4,20 +4,20 @@ import { config } from "../lib/config.js";
 import { withRetry } from "../lib/retry.js";
 import { OpenAIError } from "../lib/errors.js";
 import {
-  AggregateAnalysisSchema,
+  ReviewAnalysisArraySchema,
   GeneratedReviewsSchema,
-  type AggregateAnalysis,
+  type ReviewSentiment,
   type GeneratedReviews,
 } from "../schemas.js";
 
 const ANALYSIS_SYSTEM_PROMPT = `Sei un esperto di analisi del sentimento specializzato in lingua italiana.
-Analizza TUTTE le recensioni fornite nel loro insieme e determina:
-1. Il sentiment GENERALE complessivo: "positivo", "negativo" o "neutro"
-2. Una breve motivazione in italiano (2-3 frasi) che descrive il sentiment generale, riassumendo i temi principali e le opinioni espresse dai clienti
-3. Un punteggio di confidenza tra 0.0 e 1.0 per la valutazione complessiva
+Per ogni recensione fornita, determina individualmente:
+1. Il sentiment: "positivo", "negativo" o "neutro"
+2. Una breve motivazione in italiano (1 frase) che spiega il sentiment assegnato
+3. Un punteggio di confidenza tra 0.0 e 1.0 (quanto sei certo della classificazione)
 
-Sii preciso e coerente. Considera il quadro generale, non le singole recensioni.
-Le recensioni riguardano delle cuffie wireless "SoundPro X1".`;
+Analizza OGNI recensione separatamente. Restituisci esattamente tanti risultati quante sono le recensioni, nello stesso ordine.
+Le recensioni riguardano le cuffie wireless "SoundPro X1".`;
 
 const GENERATION_SYSTEM_PROMPT = `Genera recensioni italiane realistiche per delle cuffie wireless premium "SoundPro X1 — Cuffie Wireless con Cancellazione del Rumore" al prezzo di €149.99.
 Le recensioni devono essere varie: alcune positive, alcune negative, alcune neutre.
@@ -25,7 +25,7 @@ Ogni recensione deve sembrare scritta da un vero cliente italiano, con toni e st
 Copri aspetti come: qualità audio, comfort, batteria, cancellazione rumore, prezzo, design, Bluetooth, microfono.`;
 
 export async function analyzeSentiments(reviews: string[]): Promise<{
-  result: AggregateAnalysis;
+  results: ReviewSentiment[];
   model: string;
 }> {
   const client = getOpenAIClient();
@@ -39,9 +39,9 @@ export async function analyzeSentiments(reviews: string[]): Promise<{
       model: config.OPENAI_MODEL,
       messages: [
         { role: "system", content: ANALYSIS_SYSTEM_PROMPT },
-        { role: "user", content: `Analizza il sentiment complessivo di queste ${reviews.length} recensioni:\n\n${userMessage}` },
+        { role: "user", content: `Analizza individualmente queste ${reviews.length} recensioni:\n\n${userMessage}` },
       ],
-      response_format: zodResponseFormat(AggregateAnalysisSchema, "sentiment_analysis"),
+      response_format: zodResponseFormat(ReviewAnalysisArraySchema, "sentiment_analysis"),
       temperature: 0.1,
     })
   );
@@ -57,7 +57,7 @@ export async function analyzeSentiments(reviews: string[]): Promise<{
   }
 
   return {
-    result: message.parsed,
+    results: message.parsed.results,
     model: response.model,
   };
 }

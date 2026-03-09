@@ -4,13 +4,18 @@ import { z } from "zod";
 export const SentimentEnum = z.enum(["positivo", "negativo", "neutro"]);
 export type Sentiment = z.infer<typeof SentimentEnum>;
 
-// --- Aggregate sentiment analysis result ---
-export const AggregateAnalysisSchema = z.object({
-  sentiment: SentimentEnum.describe("The overall sentiment across all reviews: positivo, negativo, or neutro"),
-  motivation: z.string().describe("A brief description in Italian (2-3 sentences) explaining the overall sentiment, summarizing the main themes and opinions expressed by customers"),
-  confidence: z.number().min(0).max(1).describe("Confidence score between 0.0 and 1.0 for the overall assessment"),
+// --- Per-review sentiment analysis result ---
+export const ReviewSentimentSchema = z.object({
+  sentiment: SentimentEnum.describe("Sentiment della singola recensione: positivo, negativo, o neutro"),
+  motivation: z.string().describe("Breve motivazione in italiano (1 frase) che spiega il sentiment assegnato"),
+  confidence: z.number().min(0).max(1).describe("Confidenza tra 0.0 e 1.0 sulla certezza della classificazione"),
 });
-export type AggregateAnalysis = z.infer<typeof AggregateAnalysisSchema>;
+export type ReviewSentiment = z.infer<typeof ReviewSentimentSchema>;
+
+export const ReviewAnalysisArraySchema = z.object({
+  results: z.array(ReviewSentimentSchema).describe("Array di risultati, uno per ogni recensione, nello stesso ordine ricevuto"),
+});
+export type ReviewAnalysisArray = z.infer<typeof ReviewAnalysisArraySchema>;
 
 // --- Generated reviews from OpenAI ---
 export const GeneratedReviewsSchema = z.object({

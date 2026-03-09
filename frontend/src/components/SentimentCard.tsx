@@ -68,7 +68,7 @@ export function SentimentCard({ result, review }: Props) {
 
       {/* Review text */}
       <p className="text-sm text-slate-600 leading-relaxed mb-3">
-        &ldquo;{result.review}&rdquo;
+        &ldquo;{review.text}&rdquo;
       </p>
 
       {/* Motivation */}
