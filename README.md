@@ -1,7 +1,5 @@
 # SentimentAI
 
-Applicazione full-stack che analizza il sentimento di recensioni testuali utilizzando le API di OpenAI con **Structured Output**. Il frontend simula una pagina prodotto e-commerce con recensioni analizzabili in tempo reale.
-
 ## Demo
 
 L'applicazione mostra una pagina prodotto (cuffie wireless "SoundPro X1") con ~30 recensioni pre-caricate. L'utente può:
