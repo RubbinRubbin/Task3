@@ -11,6 +11,12 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
+app.get("/", (_req, res) => {
+  res.json({
+    status: "ok",
+    endpoints: ["/api/analyze", "/api/generate", "/api/health"],
+  });
+});
 app.use("/api/analyze", analyzeRouter);
 app.use("/api/generate", generateRouter);
 app.use("/api/health", healthRouter);

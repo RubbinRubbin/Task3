@@ -113,17 +113,16 @@ cd Task3
 cp backend/.env.example backend/.env
 ```
 
-Apri `backend/.env` e inserisci la tua API key:
-
-```
-OPENAI_API_KEY=sk-proj-la-tua-chiave-qui
-```
-
-### 3. Installa e avvia
+### 3. Installa le dipendenze (solo la prima volta)
 
 ```bash
 npm install
 npm run install:all
+```
+
+### 4. Avvia il progetto
+
+```bash
 npm run dev
 ```
 
@@ -131,7 +130,20 @@ Backend (porta 3001) e frontend (porta 5173) si avviano insieme in un unico term
 
 Apri **http://localhost:5173** nel browser.
 
+> **Nota:** dopo la prima installazione, per le volte successive basta solo `npm run dev`.
+
 ## API Endpoints
+
+### `GET /`
+
+Info generali del server con lista degli endpoint disponibili. Visitando `http://localhost:3001` nel browser si ottiene:
+
+```json
+{
+  "status": "ok",
+  "endpoints": ["/api/analyze", "/api/generate", "/api/health"]
+}
+```
 
 ### `POST /api/analyze`
 
