@@ -1,7 +1,5 @@
 # SentimentAI
 
-## Demo
-
 L'applicazione mostra una pagina prodotto (cuffie wireless "SoundPro X1") con ~30 recensioni pre-caricate. L'utente può:
 
 - **Analizzare** tutte le recensioni con un click, ottenendo il **sentiment individuale** per ogni singola recensione con motivazione e punteggio di confidenza
